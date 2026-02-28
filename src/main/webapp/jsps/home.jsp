@@ -14,7 +14,7 @@
 <h1 align="center">Mithun Technologies is a Very Good Training Center for Learning AWS DevOps, Jenkins, Docker, Kubernetes, GitOps, ArgoCD, Terraform and Amazon Web Services</h1>
 
 <h1 align="center">Trainer Name: Bhaskar Reddy Lacchannagari</h1>
-
+<h1> The trainer name is : Chethan M </h1>
 <hr>
 <br>
 	<h1><h3> Server Side IP Address </h3><br>
