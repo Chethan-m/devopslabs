@@ -1,84 +1,78 @@
-pipeline
-{
-  agent any
-  
-  tools
-  {
-    maven 'Maven_3.8.2'
+
+  node {
+ 
+ def mavenHome = tool name: 'maven3.9.12'
+ 
+ try {
+ 
+stage('checkoutcode') {
+sendSlackNotifications('STARTED')
+git branch: 'development', url: 'https://github.com/Chethan-m/devopslabs.git'
+
+ } 
+stage('Build') {
+
+sh "${mavenHome}/bin/mvn clean package"
+
+}
+stage('ExecuteSonarQubeReport') {
+
+sh "${mavenHome}/bin/mvn clean sonar:sonar"
+
+}
+stage('UploadArtifactIntoNexus') {
+
+sh "${mavenHome}/bin/mvn clean deploy"
+
+}
+stage('DeployAppintoTomcat') {
+sshagent(['9e76a4c6-1d96-4aa5-9347-856f214a05b7']) {
+sh "scp -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/scripted-pipeline/target/maven-web-application.war ubuntu@172.31.3.183:/opt/apache-tomcat-9.0.115/webapps"
+
+	}
   }
-  
-  triggers
-  {
-    pollSCM('* * * * *')
-  }
-  
-  options
-  {
-    timestamps()
-    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '5', daysToKeepStr: '', numToKeepStr: '5'))
-  }
-  
-  stages
-  {
-    stage('Checkout Code from GitHub')
-    {
-      steps()
-      {
-        git branch: 'development', credentialsId: '957b543e-6f77-4cef-9aec-82e9b0230975', url: 'https://github.com/devopstrainingblr/maven-web-application-1.git'
-      }
-    }
-    
-    stage('Build Project')
-    {
-      steps()
-      {
-        sh "mvn clean package"
-      }
-    }
-    
-    stage('Execute SonarQube Report')
-    {
-      steps()
-      {
-        sh "mvn clean sonar:sonar"
-      }
-    }
-    
-    stage('Upload Artifacts to Sonatype Nexus')
-    {
-      steps()
-      {
-        sh "mvn clean deploy"
-      }
-    }
-    
-    stage('Deploy Application to Tomcat')
-    {
-      steps()
-      {
-        sshagent(['bfe1b3c1-c29b-4a4d-b97a-c068b7748cd0'])
-        {
-          sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@35.154.190.162:/opt/apache-tomcat-9.0.50/webapps/"
-        }
-      }
-    }
+ 
+ }
+ catch (e) {
+ currentBuild.result = "FAILED"
+ throw e
+ }
+ 
+ finally {
+ 
+ sendSlackNotifications(currentBuild.result)
+ }
+ 
+ }//node finish
+ 
+ def sendSlackNotifications(String buildStatus = 'STARTED') {
+  // build status of null means successful
+  buildStatus =  buildStatus ?: 'SUCCESSFUL'
+
+  // Default values
+  def color = 'RED'
+  def colorCode = '#FF0000'
+  def subject = "${buildStatus}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+  def summary = "${subject} (${env.BUILD_URL})"
+
+  // Override default values based on build status
+  if (buildStatus == 'STARTED') {
+    color = 'YELLOW'
+    colorCode = '#FFFF00'
+  } else if (buildStatus == 'SUCCESSFUL') {
+    color = 'GREEN'
+    colorCode = '#00FF00'
+  } else {
+    color = 'RED'
+    colorCode = '#FF0000'
   }
 
-post
-{
-  success
-  {
-    emailext to: 'devopstrainingblr@gmail.com,mithuntechnologies@yahoo.com',
-    subject: "Pipeline Build is Over Build # is ${env.BUILD_NUMBER} and Build Status is ${currentBuild.result}",
-    body: "Pipeline Build is Over Build # is ${env.BUILD_NUMBER} and Build Status is ${currentBuild.result}",
-    replyTo: 'devopstrainingblr@gmail.com'
-  }
-  failure
-  {
-    emailext to: 'devopstrainingblr@gmail.com,mithuntechnologies@yahoo.com',
-    subject: "Pipeline Build is Over Build # is ${env.BUILD_NUMBER} and Build Status is ${currentBuild.result}",
-    body: "Pipeline Build is Over Build # is ${env.BUILD_NUMBER} and Build Status is ${currentBuild.result}",
-    replyTo: 'devopstrainingblr@gmail.com'
-    }
-  }
+  // Send notifications
+  slackSend (color: colorCode, message: summary, channel: '#walmart-developers')
 }
+    
+   
+       
+   
+
+  
