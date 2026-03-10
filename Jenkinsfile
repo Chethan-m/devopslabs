@@ -4,7 +4,7 @@ pipeline
   
   tools
   {
-    maven 'Maven_3.8.2'
+    maven 'maven_3.8.2'
   }
   
   triggers
